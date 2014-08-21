@@ -2,18 +2,18 @@
 # -*- encoding: utf-8 -*-
 
 require 'youtube_it'
+require 'htmlentities'
 require 'cinch'
 require 'open-uri'
 require 'uri'
 require 'json'
 require 'net/https'
-require 'htmlentities'
 
 bot = Cinch::Bot.new do
 	configure do |c|
 		c.server = "irc.smoothirc.net"
-		c.channels = ["#photo"]
-		c.nick = "Bruce2"
+		c.channels = ["#photo", "#culture"]
+		c.nick = "Bruce"
 		c.encoding = "UTF-8"
 
 		$youtube = YouTubeIt::Client.new 
@@ -34,6 +34,7 @@ bot = Cinch::Bot.new do
 		end
 
 		def link_parse_title(link)
+			return if ((link.include? "youtube.com") || (link.include? "youtu.be"))
 			begin
 				title = open(link).read =~ /<title>(.*?)<\/title>/
 				return $decoder.decode($1)
@@ -58,9 +59,9 @@ bot = Cinch::Bot.new do
 	on :channel, /(?:(http[s]?:\/\/)?(?:www\.)?youtube.*watch\?v=([a-zA-Z0-9\-_]+))/i do |m, link, id|
 		video = youtube_parse_title(id)
 		if video.duration > 60*60 
-			m.reply "http://youtube.com/watch?v=#{video.unique_id} :: #{video.title} :: Duration : #{Time.at(video.duration).gmtime.strftime("%H:%M:%S")} :: Views : #{video.view_count}"
+			m.reply "#{video.title} :: Duration : #{Time.at(video.duration).gmtime.strftime("%H:%M:%S")} :: Views : #{video.view_count}"
 		else
-			m.reply "http://youtube.com/watch?v=#{video.unique_id} :: #{video.title} :: Duration : #{Time.at(video.duration).gmtime.strftime("%M:%S")} :: Views : #{video.view_count}"
+			m.reply "#{video.title} :: Duration : #{Time.at(video.duration).gmtime.strftime("%M:%S")} :: Views : #{video.view_count}"
 		end
 	end
 
@@ -69,7 +70,7 @@ bot = Cinch::Bot.new do
 	end
 
 	on :channel, /^!help/ do |m|
-		m.user.send "Available commands are : !yt, !seen, !memo, !si, !citation. You can tell me a YouTube URL on a channel, I will text you back the title."
+		m.user.send "Available commands are : !yt, !si, !citation. You can tell me a YouTube URL on a channel, I will text you back the title."
 	end
 
 	on :channel, /^!citation/ do |m|
@@ -87,3 +88,4 @@ bot = Cinch::Bot.new do
 	end
 end
 bot.start
+
