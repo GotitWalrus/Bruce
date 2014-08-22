@@ -18,6 +18,11 @@ bot = Cinch::Bot.new do
 
 		$youtube = YouTubeIt::Client.new 
 		$decoder = HTMLEntities.new
+	
+		# Lastfm API key
+		# get your own at http://www.lastfm.fr/api/account/create	
+		$api_key = ""
+
 	end
 
 	helpers do
@@ -41,15 +46,38 @@ bot = Cinch::Bot.new do
 			rescue Exception => e
 			end
 		end
+
+		def format_song(artist, track)
+			title = "#{artist} - #{track}"
+			video = youtube_search(title)
+			if video
+				return "#{title} ( https://youtube.com/watch?v=#{video.unique_id} )"
+			else
+				return "#{title} (no video found)"
+			end
+		end
+
+		def get_current_song(user)
+			parsed = JSON.parse(open("http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=#{user}&api_key=#{$api_key}&format=json&limit=1").read)['recenttracks']['track']
+			begin
+				return format_song(parsed['artist']['#text'], parsed['name'])
+			rescue Exception => e
+				begin
+					return format_song(parsed[0]['artist']['#text'], parsed[0]['name'])
+				rescue Exception => e
+					return "Sorry, something went wrong!"
+				end
+			end
+		end
 	end
 
 	on :channel, /^!yt (.+)/i do |m, query|
 		video = youtube_search(query)
 		if video 
 			if video.duration > 60*60 
-				m.reply "http://youtube.com/watch?v=#{video.unique_id} :: #{video.title} :: Duration : #{Time.at(video.duration).gmtime.strftime("%H:%M:%S")} :: Views : #{video.view_count}"
+				m.reply "https://youtube.com/watch?v=#{video.unique_id} :: #{video.title} :: Duration : #{Time.at(video.duration).gmtime.strftime("%H:%M:%S")} :: Views : #{video.view_count}"
 			else
-				m.reply "http://youtube.com/watch?v=#{video.unique_id} :: #{video.title} :: Duration : #{Time.at(video.duration).gmtime.strftime("%M:%S")} :: Views : #{video.view_count}"
+				m.reply "https://youtube.com/watch?v=#{video.unique_id} :: #{video.title} :: Duration : #{Time.at(video.duration).gmtime.strftime("%M:%S")} :: Views : #{video.view_count}"
 			end
 		else
 			m.reply "No results."
@@ -65,12 +93,16 @@ bot = Cinch::Bot.new do
 		end
 	end
 
+	on :channel, /^!lfm (.+)/i do |m, cuser|
+		m.reply get_current_song(cuser)
+	end
+
 	on :channel, /((https?:\/\/)?(www.)?(([a-zA-Z0-9\-]){2,}\.){1,4}([a-zA-Z]){2,6}(\/([a-zA-Z\-_\/\.0-9#:?=&~;,\+%]*)?)?)/i do |m, link|
 		m.reply link_parse_title(link)
 	end
 
 	on :channel, /^!help/ do |m|
-		m.user.send "Available commands are : !yt, !si, !citation. You can tell me a YouTube URL on a channel, I will text you back the title."
+		m.user.send "Available commands are : !yt, !lfm, !si, !citation. You can tell me a YouTube URL on a channel, I will text you back the title."
 	end
 
 	on :channel, /^!citation/ do |m|
@@ -88,4 +120,3 @@ bot = Cinch::Bot.new do
 	end
 end
 bot.start
-
