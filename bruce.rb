@@ -47,13 +47,23 @@ bot = Cinch::Bot.new do
 			end
 		end
 
+		def format_song(artist, track)
+			title = "#{artist} - #{track}"
+			video = youtube_search(title)
+			if video
+				return "#{title} ( https://youtube.com/watch?v=#{video.unique_id} )"
+			else
+				return "#{title} (no video found)"
+			end
+		end
+
 		def get_current_song(user)
-			parsed = JSON.parse(open("http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=" + user + "&api_key=" + $api_key + "&format=json&limit=1").read)['recenttracks']['track']
+			parsed = JSON.parse(open("http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=#{user}&api_key=#{$api_key}&format=json&limit=1").read)['recenttracks']['track']
 			begin
-				return parsed['artist']['#text'] + " - " + parsed['name']
+				return format_song(parsed['artist']['#text'], parsed['name'])
 			rescue Exception => e
 				begin
-					return parsed[0]['artist']['#text'] + " - " + parsed[0]['name']
+					return format_song(parsed[0]['artist']['#text'], parsed[0]['name'])
 				rescue Exception => e
 					return "Sorry, something went wrong!"
 				end
@@ -65,9 +75,9 @@ bot = Cinch::Bot.new do
 		video = youtube_search(query)
 		if video 
 			if video.duration > 60*60 
-				m.reply "http://youtube.com/watch?v=#{video.unique_id} :: #{video.title} :: Duration : #{Time.at(video.duration).gmtime.strftime("%H:%M:%S")} :: Views : #{video.view_count}"
+				m.reply "https://youtube.com/watch?v=#{video.unique_id} :: #{video.title} :: Duration : #{Time.at(video.duration).gmtime.strftime("%H:%M:%S")} :: Views : #{video.view_count}"
 			else
-				m.reply "http://youtube.com/watch?v=#{video.unique_id} :: #{video.title} :: Duration : #{Time.at(video.duration).gmtime.strftime("%M:%S")} :: Views : #{video.view_count}"
+				m.reply "https://youtube.com/watch?v=#{video.unique_id} :: #{video.title} :: Duration : #{Time.at(video.duration).gmtime.strftime("%M:%S")} :: Views : #{video.view_count}"
 			end
 		else
 			m.reply "No results."
@@ -110,4 +120,3 @@ bot = Cinch::Bot.new do
 	end
 end
 bot.start
-
