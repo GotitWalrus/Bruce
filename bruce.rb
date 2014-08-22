@@ -8,7 +8,6 @@ require 'open-uri'
 require 'uri'
 require 'json'
 require 'net/https'
-require 'lastfm'
 
 bot = Cinch::Bot.new do
 	configure do |c|
@@ -20,12 +19,10 @@ bot = Cinch::Bot.new do
 		$youtube = YouTubeIt::Client.new 
 		$decoder = HTMLEntities.new
 	
-		# Lastfm API keys 
+		# Lastfm API key
 		# get your own at http://www.lastfm.fr/api/account/create	
-		api_key = ""
-		api_secret = ""
+		$api_key = ""
 
-		$lastfm = Lastfm.new(api_key, api_secret)
 	end
 
 	helpers do
@@ -51,10 +48,15 @@ bot = Cinch::Bot.new do
 		end
 
 		def get_current_song(user)
+			parsed = JSON.parse(open("http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=" + user + "&api_key=" + $api_key + "&format=json&limit=1").read)['recenttracks']['track']
 			begin
-				got = $lastfm.user.get_recent_tracks(user: user, limit: 1)
-				return got['artist']['content'] + " - " + got['name']
+				return parsed['artist']['#text'] + " - " + parsed['name']
 			rescue Exception => e
+				begin
+					return parsed[0]['artist']['#text'] + " - " + parsed[0]['name']
+				rescue Exception => e
+					return "Sorry, something went wrong!"
+				end
 			end
 		end
 	end
@@ -85,10 +87,6 @@ bot = Cinch::Bot.new do
 		m.reply get_current_song(cuser)
 	end
 
-	on :channel, /^!lfm/ do |m|
-		m.reply get_current_song(m.user.nick)
-	end
-
 	on :channel, /((https?:\/\/)?(www.)?(([a-zA-Z0-9\-]){2,}\.){1,4}([a-zA-Z]){2,6}(\/([a-zA-Z\-_\/\.0-9#:?=&~;,\+%]*)?)?)/i do |m, link|
 		m.reply link_parse_title(link)
 	end
@@ -112,3 +110,4 @@ bot = Cinch::Bot.new do
 	end
 end
 bot.start
+
